@@ -1,0 +1,87 @@
+1.
+CREATE TABLE Table_India (
+    Customer_Name VARCHAR(255) NOT NULL,
+    Customer_ID VARCHAR(18) NOT NULL,
+    Open_Date DATE NOT NULL,
+    Last_Consulted_Date DATE,
+    Vaccination_Type CHAR(5),
+    Doctor_Consulted VARCHAR(255),
+    State CHAR(5),
+    Country CHAR(5),
+    Post_Code INT,
+    DOB DATE,
+    Is_Active CHAR(1),
+    Age INT, -- Derived column
+    Days_Since_Last_Consultation INT, -- Derived column
+    PRIMARY KEY (Customer_ID)
+);
+2.
+INSERT INTO Table_India (
+    Customer_Name, Customer_ID, Open_Date, Last_Consulted_Date, Vaccination_Type, Doctor_Consulted,
+    State, Country, Post_Code, DOB, Is_Active, Age, Days_Since_Last_Consultation
+)
+SELECT 
+    Customer_Name,
+    Customer_ID,
+    Open_Date,
+    Last_Consulted_Date,
+    Vaccination_Type,
+    Doctor_Consulted,
+    State,
+    Country,
+    Post_Code,
+    DOB,
+    Is_Active,
+   
+    TIMESTAMPDIFF(YEAR, DOB, CURDATE()) AS Age,
+    CASE 
+        WHEN Last_Consulted_Date IS NOT NULL THEN DATEDIFF(CURDATE(), Last_Consulted_Date)
+        ELSE NULL
+    END AS Days_Since_Last_Consultation
+FROM Staging_Table
+WHERE Country = 'IND';
+3.
+DELIMITER $$
+
+CREATE PROCEDURE LoadCustomerData_India()
+BEGIN
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION 
+    BEGIN
+        ROLLBACK;
+    END;
+
+    START TRANSACTION;
+
+    INSERT INTO Table_India (
+        Customer_Name, Customer_ID, Open_Date, Last_Consulted_Date, Vaccination_Type, Doctor_Consulted,
+        State, Country, Post_Code, DOB, Is_Active, Age, Days_Since_Last_Consultation
+    )
+    SELECT 
+        Customer_Name,
+        Customer_ID,
+        Open_Date,
+        Last_Consulted_Date,
+        Vaccination_Type,
+        Doctor_Consulted,
+        State,
+        Country,
+        Post_Code,
+        DOB,
+        Is_Active,
+        TIMESTAMPDIFF(YEAR, DOB, CURDATE()) AS Age,
+        CASE 
+            WHEN Last_Consulted_Date IS NOT NULL THEN DATEDIFF(CURDATE(), Last_Consulted_Date)
+            ELSE NULL
+        END AS Days_Since_Last_Consultation
+    FROM Staging_Table
+    WHERE Country = 'IND'
+    AND Customer_Name IS NOT NULL
+    AND Customer_ID IS NOT NULL
+    AND Open_Date IS NOT NULL
+    AND Post_Code IS NOT NULL;
+
+    COMMIT;
+END$$
+
+DELIMITER ;
+
